@@ -1,1 +1,1 @@
-{"web-server": "npm run dev"}
+{"web-app": "npm run dev"}
