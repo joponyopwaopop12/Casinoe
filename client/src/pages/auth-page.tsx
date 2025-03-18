@@ -113,115 +113,113 @@ export default function AuthPage() {
           </div>
 
           <Card>
-            <CardHeader>
-              <Tabs defaultValue="login" value={activeTab} onValueChange={setActiveTab}>
+            <Tabs defaultValue="login" value={activeTab} onValueChange={setActiveTab}>
+              <CardHeader>
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="login">Login</TabsTrigger>
                   <TabsTrigger value="register">Register</TabsTrigger>
                 </TabsList>
+              </CardHeader>
+              <CardContent>
                 <TabsContent value="login">
-                  <CardTitle className="text-2xl">Welcome Back</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-2xl mb-2">Welcome Back</CardTitle>
+                  <CardDescription className="mb-6">
                     Enter your credentials to access your account
                   </CardDescription>
+                  
+                  <Form {...loginForm}>
+                    <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
+                      <FormField
+                        control={loginForm.control}
+                        name="username"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Username</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter your username" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={loginForm.control}
+                        name="password"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Password</FormLabel>
+                            <FormControl>
+                              <Input type="password" placeholder="Enter your password" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button 
+                        type="submit" 
+                        className="w-full" 
+                        disabled={loginMutation.isPending}
+                      >
+                        {loginMutation.isPending ? "Logging in..." : "Login"}
+                      </Button>
+                    </form>
+                  </Form>
                 </TabsContent>
+
                 <TabsContent value="register">
-                  <CardTitle className="text-2xl">Create Account</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-2xl mb-2">Create Account</CardTitle>
+                  <CardDescription className="mb-6">
                     Sign up for a new account and get $10,000 in play money
                   </CardDescription>
+                  
+                  <Form {...registerForm}>
+                    <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
+                      <FormField
+                        control={registerForm.control}
+                        name="username"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Username</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Choose a username" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={registerForm.control}
+                        name="password"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Password</FormLabel>
+                            <FormControl>
+                              <Input type="password" placeholder="Create a password" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button 
+                        type="submit" 
+                        className="w-full" 
+                        disabled={registerMutation.isPending}
+                      >
+                        {registerMutation.isPending ? "Creating account..." : "Register & Get $10,000"}
+                      </Button>
+                    </form>
+                  </Form>
                 </TabsContent>
-              </Tabs>
-            </CardHeader>
-            <CardContent>
-              <TabsContent value="login" className="mt-0">
-                <Form {...loginForm}>
-                  <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
-                    <FormField
-                      control={loginForm.control}
-                      name="username"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Username</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter your username" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={loginForm.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Password</FormLabel>
-                          <FormControl>
-                            <Input type="password" placeholder="Enter your password" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button 
-                      type="submit" 
-                      className="w-full" 
-                      disabled={loginMutation.isPending}
-                    >
-                      {loginMutation.isPending ? "Logging in..." : "Login"}
-                    </Button>
-                  </form>
-                </Form>
-              </TabsContent>
 
-              <TabsContent value="register" className="mt-0">
-                <Form {...registerForm}>
-                  <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
-                    <FormField
-                      control={registerForm.control}
-                      name="username"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Username</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Choose a username" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={registerForm.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Password</FormLabel>
-                          <FormControl>
-                            <Input type="password" placeholder="Create a password" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button 
-                      type="submit" 
-                      className="w-full" 
-                      disabled={registerMutation.isPending}
-                    >
-                      {registerMutation.isPending ? "Creating account..." : "Register & Get $10,000"}
-                    </Button>
-                  </form>
-                </Form>
-              </TabsContent>
-
-              {/* Display for mobile users about the bonus */}
-              <div className="mt-6 p-3 bg-slate-800 rounded-lg lg:hidden">
-                <p className="text-sm text-center text-slate-300">
-                  <span className="text-green-400 font-medium">$10,000 Bonus: </span>
-                  Create a new account today and receive $10,000 in play money!
-                </p>
-              </div>
-            </CardContent>
+                {/* Display for mobile users about the bonus */}
+                <div className="mt-6 p-3 bg-slate-800 rounded-lg lg:hidden">
+                  <p className="text-sm text-center text-slate-300">
+                    <span className="text-green-400 font-medium">$10,000 Bonus: </span>
+                    Create a new account today and receive $10,000 in play money!
+                  </p>
+                </div>
+              </CardContent>
+            </Tabs>
           </Card>
         </div>
       </div>

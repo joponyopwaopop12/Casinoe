@@ -1,4 +1,8 @@
 {
-  "name": "web-server",
-  "command": "tsx server/index.ts"
+  "workflows": [
+    {
+      "name": "web-server",
+      "command": "tsx server/index.ts"
+    }
+  ]
 }

@@ -1,1 +1,1 @@
-{ "defaultRun": "web-server", "web-server": "tsx server/index.ts" }
+{"web-server": "npm run dev"}
