@@ -1,8 +1,8 @@
 {
   "workflows": [
     {
-      "name": "web-server",
-      "command": "tsx server/index.ts"
+      "name": "casino-app",
+      "command": "npm run dev"
     }
   ]
 }
