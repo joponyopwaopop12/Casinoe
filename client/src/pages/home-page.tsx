@@ -1,5 +1,6 @@
 import { Layout } from "@/components/sidebar";
 import { GameCard } from "@/components/game-card";
+import { BalanceManagement } from "@/components/balance-management";
 import { useAuth } from "@/hooks/use-auth";
 import { Separator } from "@/components/ui/separator";
 import { 
@@ -67,51 +68,59 @@ export default function HomePage() {
           />
         </div>
         
-        <h2 className="text-xl font-bold mt-10 mb-6">Recent Activity</h2>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-base font-medium">Your Recent Bets</CardTitle>
-            <a href="/history" className="text-sm text-cyan-400 hover:text-cyan-300 transition">
-              View All
-            </a>
-          </CardHeader>
-          <CardContent>
-            {recentBets.length > 0 ? (
-              <div className="divide-y divide-slate-800">
-                {recentBets.map((bet: any) => (
-                  <div key={bet.id} className="py-4 flex justify-between items-center">
-                    <div className="flex items-center">
-                      <div className={`
-                        w-10 h-10 rounded-full flex items-center justify-center mr-3
-                        ${bet.game === 'dice' ? 'bg-cyan-500/20 text-cyan-400' : ''}
-                        ${bet.game === 'mines' ? 'bg-purple-500/20 text-purple-400' : ''}
-                        ${bet.game === 'blackjack' ? 'bg-yellow-500/20 text-yellow-400' : ''}
-                      `}>
-                        {bet.game === 'dice' && <Dice5 className="h-5 w-5" />}
-                        {bet.game === 'mines' && <Bomb className="h-5 w-5" />}
-                        {bet.game === 'blackjack' && <Layers className="h-5 w-5" />}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-10">
+          <div className="lg:col-span-1">
+            <h2 className="text-xl font-bold mb-6">Manage Balance</h2>
+            <BalanceManagement />
+          </div>
+          
+          <div className="lg:col-span-2">
+            <h2 className="text-xl font-bold mb-6">Recent Activity</h2>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-base font-medium">Your Recent Bets</CardTitle>
+                <a href="/history" className="text-sm text-cyan-400 hover:text-cyan-300 transition">
+                  View All
+                </a>
+              </CardHeader>
+              <CardContent>
+                {recentBets.length > 0 ? (
+                  <div className="divide-y divide-slate-800">
+                    {recentBets.map((bet: any) => (
+                      <div key={bet.id} className="py-4 flex justify-between items-center">
+                        <div className="flex items-center">
+                          <div className={`
+                            w-10 h-10 rounded-full flex items-center justify-center mr-3
+                            ${bet.game === 'dice' ? 'bg-cyan-500/20 text-cyan-400' : ''}
+                            ${bet.game === 'mines' ? 'bg-purple-500/20 text-purple-400' : ''}
+                            ${bet.game === 'blackjack' ? 'bg-yellow-500/20 text-yellow-400' : ''}
+                          `}>
+                            {bet.game === 'dice' && <Dice5 className="h-5 w-5" />}
+                            {bet.game === 'mines' && <Bomb className="h-5 w-5" />}
+                            {bet.game === 'blackjack' && <Layers className="h-5 w-5" />}
+                          </div>
+                          <div>
+                            <p className="font-medium capitalize">{bet.game}</p>
+                            <p className="text-xs text-slate-400">{formatDate(bet.timestamp)}</p>
+                          </div>
+                        </div>
+                        <div className={bet.profit > 0 ? "text-green-500" : "text-red-500"} >
+                          {formatCurrency(bet.profit)}
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium capitalize">{bet.game}</p>
-                        <p className="text-xs text-slate-400">{formatDate(bet.timestamp)}</p>
-                      </div>
-                    </div>
-                    <div className={bet.profit > 0 ? "text-green-500" : "text-red-500"} >
-                      {formatCurrency(bet.profit)}
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="py-6 text-center text-slate-400">
-                <History className="h-10 w-10 mx-auto mb-2" />
-                <p>No bet history yet</p>
-                <p className="text-sm mt-1">Try your luck in one of our games!</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                ) : (
+                  <div className="py-6 text-center text-slate-400">
+                    <History className="h-10 w-10 mx-auto mb-2" />
+                    <p>No bet history yet</p>
+                    <p className="text-sm mt-1">Try your luck in one of our games!</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </Layout>
   );

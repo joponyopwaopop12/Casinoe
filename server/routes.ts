@@ -99,6 +99,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error fetching bet history" });
     }
   });
+  
+  // Add balance to user account
+  app.post("/api/balance/add", requireAuth, async (req, res) => {
+    try {
+      const { amount } = req.body;
+      
+      // Validate input
+      if (!amount || amount <= 0) {
+        return res.status(400).json({ message: "Invalid amount" });
+      }
+      
+      // Get user and update balance
+      const user = await storage.getUser(req.user!.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const newBalance = user.balance + amount;
+      await storage.updateUserBalance(user.id, newBalance);
+      
+      res.json({ 
+        success: true,
+        balance: newBalance,
+        message: "Balance added successfully"
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Error adding balance" });
+    }
+  });
 
   // Dice game endpoints
   app.post("/api/game/dice/roll", requireAuth, async (req, res) => {
