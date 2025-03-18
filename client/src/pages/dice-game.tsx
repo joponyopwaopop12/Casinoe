@@ -27,6 +27,7 @@ export default function DiceGame() {
   const [showWinAnimation, setShowWinAnimation] = useState(false);
   const [winAmount, setWinAmount] = useState(0);
   const [gameError, setGameError] = useState<string | null>(null);
+  const [gameOutcome, setGameOutcome] = useState<'win' | 'loss' | null>(null);
   
   // Get bet history
   const { data: bets = [] } = useQuery<any[]>({

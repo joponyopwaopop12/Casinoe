@@ -16,7 +16,8 @@ import {
   Loader2, 
   RefreshCw, 
   DollarSign, 
-  Gem 
+  Gem, 
+  ArrowLeft
 } from "lucide-react";
 import { useGameSession } from "@/hooks/use-game-session";
 import useSound from "use-sound";
@@ -27,6 +28,15 @@ export default function MinesGame() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { gameId, isActiveSession, startSession, endSession } = useGameSession('mines');
+  
+  // Sound effects
+  const [playExplosion] = useSound(explosionSound);
+  const [playReveal] = useSound(revealSound);
+  
+  // Animation states
+  const [shakingTile, setShakingTile] = useState<number | null>(null);
+  const [explodingTile, setExplodingTile] = useState<number | null>(null);
   
   // Game state
   const [betAmount, setBetAmount] = useState(100);
@@ -105,10 +115,26 @@ export default function MinesGame() {
       if (data.hitMine) {
         setHitMine(true);
         setGameActive(false);
+        
+        // Play explosion sound
+        playExplosion();
+        
+        // Show explosion animation on the mine
+        setExplodingTile(data.tileIndex);
+        
         // Invalidate queries to refresh user data since we lost
         queryClient.invalidateQueries({ queryKey: ["/api/user"] });
         queryClient.invalidateQueries({ queryKey: ["/api/bets"] });
+        
+        // After explosion, redirect back to game menu
+        setTimeout(() => {
+          setExplodingTile(null);
+          endSession();
+        }, 1500);
       } else {
+        // Play reveal sound for safe tile
+        playReveal();
+        
         // Update multiplier and potential payout
         setCurrentMultiplier(data.currentMultiplier);
         setPotentialPayout(data.potentialPayout);
@@ -160,6 +186,21 @@ export default function MinesGame() {
     },
   });
   
+  // When game session changes, synchronize with local state
+  useEffect(() => {
+    setGameActive(isActiveSession);
+    
+    // Reset game state when session ends
+    if (!isActiveSession) {
+      setRevealedTiles([]);
+      setHitMine(false);
+      setCurrentMultiplier(1);
+      setPotentialPayout(betAmount);
+      setShakingTile(null);
+      setExplodingTile(null);
+    }
+  }, [isActiveSession, betAmount]);
+  
   // Handle start game
   const handleStartGame = () => {
     if (!isValidBet()) {
@@ -167,14 +208,39 @@ export default function MinesGame() {
       return;
     }
     
+    // Create new session and redirect
+    const newGameId = startSession();
     startGameMutation.mutate();
   };
   
-  // Handle reveal tile
+  // Handle reveal tile with animations
   const handleRevealTile = (tileIndex: number) => {
-    if (!gameActive || revealedTiles.includes(tileIndex)) return;
+    if (!gameActive || revealedTiles.includes(tileIndex) || shakingTile !== null) return;
     
-    revealTileMutation.mutate(tileIndex);
+    // Set tile shaking animation
+    setShakingTile(tileIndex);
+    
+    // After a brief delay, reveal the tile
+    setTimeout(() => {
+      revealTileMutation.mutate(tileIndex);
+      setShakingTile(null);
+      
+      // Play appropriate sound effect and animate based on result
+      if (minePositions.includes(tileIndex)) {
+        // It's a mine!
+        playExplosion();
+        setExplodingTile(tileIndex);
+        
+        // After explosion animation, return to game menu
+        setTimeout(() => {
+          setExplodingTile(null);
+          endSession();
+        }, 1500);
+      } else {
+        // Safe tile
+        playReveal();
+      }
+    }, 300);
   };
   
   // Handle cash out
@@ -184,9 +250,14 @@ export default function MinesGame() {
     }
     
     cashOutMutation.mutate();
+    
+    // After successful cashout, go back to game menu
+    setTimeout(() => {
+      endSession();
+    }, 1500);
   };
   
-  // Generate tiles grid
+  // Generate tiles grid with animations
   const renderTiles = () => {
     const tiles = [];
     const gridSize = 25; // 5x5 grid
@@ -195,25 +266,29 @@ export default function MinesGame() {
       const isRevealed = revealedTiles.includes(i);
       const isMine = minePositions.includes(i);
       const isExposedMine = hitMine && isMine;
+      const isShaking = shakingTile === i;
+      const isExploding = explodingTile === i;
       
       tiles.push(
         <button
           key={i}
           onClick={() => handleRevealTile(i)}
-          disabled={!gameActive || isRevealed || hitMine}
+          disabled={!gameActive || isRevealed || hitMine || shakingTile !== null}
           className={`
             relative aspect-square rounded-lg transition-all duration-200
-            ${isRevealed && !isMine ? 'bg-green-500 shadow-lg' : ''}
+            ${isRevealed && !isMine ? 'bg-green-500 shadow-lg animate-pulse' : ''}
             ${isExposedMine ? 'bg-red-500 shadow-lg' : ''}
-            ${!isRevealed && !isExposedMine ? 'bg-slate-700 hover:bg-slate-600 active:scale-95' : ''}
-            ${isRevealed || hitMine ? 'cursor-default' : 'cursor-pointer'}
+            ${isShaking ? 'animate-[wiggle_0.3s_ease-in-out_infinite]' : ''}
+            ${isExploding ? 'bg-red-500 shadow-lg animate-[explosion_0.5s_ease-in-out]' : ''}
+            ${!isRevealed && !isExposedMine && !isExploding ? 'bg-slate-700 hover:bg-slate-600 active:scale-95' : ''}
+            ${(isRevealed || hitMine || shakingTile !== null) ? 'cursor-default' : 'cursor-pointer'}
           `}
         >
           {isRevealed && !isMine && (
             <Gem className="h-6 w-6 text-white" />
           )}
-          {isExposedMine && (
-            <Bomb className="h-6 w-6 text-white" />
+          {(isExposedMine || isExploding) && (
+            <Bomb className={`h-6 w-6 text-white ${isExploding ? 'animate-spin' : ''}`} />
           )}
         </button>
       );
@@ -411,6 +486,18 @@ export default function MinesGame() {
             </Card>
           </div>
         </div>
+        
+        {/* Back button (only shown in active game) */}
+        {isActiveSession && (
+          <Button 
+            onClick={endSession} 
+            variant="outline" 
+            className="mt-6"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Games
+          </Button>
+        )}
       </div>
     </Layout>
   );
