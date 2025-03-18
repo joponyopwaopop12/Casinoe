@@ -10,7 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Dice, Bomb, Layers, ChevronsRight } from "lucide-react";
+import { Dice5, Bomb, Layers, ChevronsRight } from "lucide-react";
 
 const registerSchema = z.object({
   username: z.string().min(3, {
@@ -82,7 +82,7 @@ export default function AuthPage() {
 
           <div className="grid grid-cols-3 gap-6 mb-10">
             <div className="flex flex-col items-center p-4 bg-slate-800 rounded-lg">
-              <Dice className="h-10 w-10 text-cyan-500 mb-3" />
+              <Dice5 className="h-10 w-10 text-cyan-500 mb-3" />
               <h3 className="font-medium">Dice</h3>
             </div>
             <div className="flex flex-col items-center p-4 bg-slate-800 rounded-lg">

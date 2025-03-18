@@ -1,8 +1,8 @@
 {
   "workflows": [
     {
-      "name": "Start application",
-      "command": "npm run dev"
+      "name": "web-server",
+      "command": "tsx server/index.ts"
     }
   ]
 }

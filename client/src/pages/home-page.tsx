@@ -9,7 +9,7 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
-import { Dice, Bomb, Layers, History } from "lucide-react";
+import { Dice5, Bomb, Layers, History } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/game-utils";
 import { Badge } from "@/components/ui/badge";
 
@@ -17,7 +17,7 @@ export default function HomePage() {
   const { user } = useAuth();
   
   // Get recent bets for the user
-  const { data: bets = [] } = useQuery({
+  const { data: bets = [] } = useQuery<any[]>({
     queryKey: ["/api/bets"],
   });
   
@@ -33,7 +33,7 @@ export default function HomePage() {
           <GameCard 
             title="Dice"
             description="Predict if the dice roll will be over or under your selected value."
-            icon={<Dice className="h-12 w-12 text-cyan-500" />}
+            icon={<Dice5 className="h-12 w-12 text-cyan-500" />}
             href="/dice"
             maxWin="10x"
             tag="Popular"
@@ -79,7 +79,7 @@ export default function HomePage() {
           <CardContent>
             {recentBets.length > 0 ? (
               <div className="divide-y divide-slate-800">
-                {recentBets.map((bet) => (
+                {recentBets.map((bet: any) => (
                   <div key={bet.id} className="py-4 flex justify-between items-center">
                     <div className="flex items-center">
                       <div className={`
@@ -88,7 +88,7 @@ export default function HomePage() {
                         ${bet.game === 'mines' ? 'bg-purple-500/20 text-purple-400' : ''}
                         ${bet.game === 'blackjack' ? 'bg-yellow-500/20 text-yellow-400' : ''}
                       `}>
-                        {bet.game === 'dice' && <Dice className="h-5 w-5" />}
+                        {bet.game === 'dice' && <Dice5 className="h-5 w-5" />}
                         {bet.game === 'mines' && <Bomb className="h-5 w-5" />}
                         {bet.game === 'blackjack' && <Layers className="h-5 w-5" />}
                       </div>

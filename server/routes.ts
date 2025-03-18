@@ -100,8 +100,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Dice game endpoint
-  app.post("/api/game/dice", requireAuth, async (req, res) => {
+  // Dice game endpoints
+  app.post("/api/game/dice/roll", requireAuth, async (req, res) => {
     try {
       const { betAmount, prediction, targetValue } = req.body;
       
@@ -177,12 +177,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Mines game endpoint
-  app.post("/api/game/mines", requireAuth, async (req, res) => {
+  // Mines game - start game
+  app.post("/api/game/mines/start", requireAuth, async (req, res) => {
     try {
-      const { betAmount, mineCount, revealedPositions } = req.body;
+      const { betAmount, mineCount } = req.body;
       
       // Validate input
-      if (!betAmount || !mineCount || !Array.isArray(revealedPositions) || 
+      if (!betAmount || !mineCount || 
           betAmount <= 0 || 
           mineCount < 1 || 
           mineCount > 24) {
@@ -201,32 +202,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       while (minePositions.length < mineCount) {
         const position = secureRandom(0, totalCells - 1);
-        if (!minePositions.includes(position) && !revealedPositions.includes(position)) {
+        if (!minePositions.includes(position)) {
           minePositions.push(position);
         }
       }
       
-      // Check if any revealed position has a mine
-      const hitMine = revealedPositions.some(pos => minePositions.includes(pos));
+      // Deduct bet amount from user balance
+      const newBalance = user.balance - betAmount;
+      await storage.updateUserBalance(user.id, newBalance);
       
-      // Calculate profit or loss
-      let profit = -betAmount;
-      if (!hitMine) {
-        // Calculate multiplier based on revealed positions and mine count
-        const safeRevealCount = revealedPositions.length;
-        const safeCells = totalCells - mineCount;
-        
-        // Multiplier increases with more revealed cells
-        // Formula: base multiplier * (1 + (revealedCount/safeCells)^2 * maxMultiplier)
-        const baseMultiplier = 1;
-        const maxMultiplier = 10;
-        const multiplier = baseMultiplier + (safeRevealCount / safeCells) ** 2 * maxMultiplier;
-        
-        profit = Math.floor(betAmount * (multiplier - 1));
+      // We don't record a bet yet - will be recorded when game ends
+      
+      res.json({
+        minePositions,
+        newBalance
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Error starting mines game" });
+    }
+  });
+  
+  // Mines game - reveal tile
+  app.post("/api/game/mines/reveal", requireAuth, async (req, res) => {
+    try {
+      const { tileIndex, betAmount, mineCount, minePositions, revealedPositions } = req.body;
+      
+      // Validate input
+      if (tileIndex === undefined || !betAmount || !mineCount || 
+          !Array.isArray(minePositions) || !Array.isArray(revealedPositions)) {
+        return res.status(400).json({ message: "Invalid game parameters" });
       }
       
-      // Update user balance
-      const newBalance = user.balance + profit;
+      const user = await storage.getUser(req.user!.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Check if the revealed tile contains a mine
+      const hitMine = minePositions.includes(tileIndex);
+      const newRevealedPositions = [...revealedPositions, tileIndex];
+      
+      // Calculate current multiplier and potential payout
+      const totalCells = 25;
+      const safeCells = totalCells - mineCount;
+      const safeRevealCount = newRevealedPositions.length;
+      
+      // Calculate multiplier
+      const baseMultiplier = 1;
+      const maxMultiplier = 10;
+      const multiplier = baseMultiplier + (safeRevealCount / safeCells) ** 2 * maxMultiplier;
+      
+      // Calculate potential profit
+      let profit = hitMine ? -betAmount : Math.floor(betAmount * (multiplier - 1));
+      
+      res.json({
+        tileIndex,
+        hitMine,
+        currentMultiplier: multiplier,
+        potentialPayout: betAmount + Math.floor(betAmount * (multiplier - 1)),
+        revealedPositions: newRevealedPositions
+      });
+      
+    } catch (error) {
+      res.status(500).json({ message: "Error revealing tile" });
+    }
+  });
+  
+  // Mines game - cash out
+  app.post("/api/game/mines/cashout", requireAuth, async (req, res) => {
+    try {
+      const { betAmount, mineCount, minePositions, revealedPositions } = req.body;
+      
+      // Validate input
+      if (!betAmount || !mineCount || 
+          !Array.isArray(minePositions) || !Array.isArray(revealedPositions) || 
+          betAmount <= 0 || 
+          mineCount < 1 || 
+          mineCount > 24) {
+        return res.status(400).json({ message: "Invalid game parameters" });
+      }
+      
+      // Check if user exists
+      const user = await storage.getUser(req.user!.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Calculate multiplier based on revealed positions and mine count
+      const totalCells = 25;
+      const safeRevealCount = revealedPositions.length;
+      const safeCells = totalCells - mineCount;
+      
+      // Multiplier increases with more revealed cells
+      const baseMultiplier = 1;
+      const maxMultiplier = 10;
+      const multiplier = baseMultiplier + (safeRevealCount / safeCells) ** 2 * maxMultiplier;
+      
+      // Calculate profit
+      const profit = Math.floor(betAmount * (multiplier - 1));
+      
+      // Update user balance (add original bet amount back plus profit)
+      const newBalance = user.balance + betAmount + profit;
       await storage.updateUserBalance(user.id, newBalance);
       
       // Record the bet
@@ -246,119 +322,135 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       res.json({
-        hitMine,
-        minePositions: hitMine ? minePositions : [],
+        minePositions,
         profit,
         newBalance,
-        win: !hitMine
+        win: true
       });
     } catch (error) {
-      res.status(500).json({ message: "Error processing mines game" });
+      res.status(500).json({ message: "Error processing mines game cashout" });
     }
   });
 
-  // Blackjack game endpoint
-  app.post("/api/game/blackjack", requireAuth, async (req, res) => {
+  // Blackjack game - start game
+  app.post("/api/game/blackjack/start", requireAuth, async (req, res) => {
     try {
-      const { betAmount, action, playerCards, dealerCards } = req.body;
+      const { betAmount } = req.body;
       
       // Validate input
-      if (!betAmount || !action || betAmount <= 0) {
-        return res.status(400).json({ message: "Invalid game parameters" });
+      if (!betAmount || betAmount <= 0) {
+        return res.status(400).json({ message: "Invalid bet amount" });
       }
       
-      // Check if user has enough balance for a new game
+      // Check if user has enough balance
       const user = await storage.getUser(req.user!.id);
-      if (!user || (action === 'deal' && user.balance < betAmount)) {
+      if (!user || user.balance < betAmount) {
         return res.status(400).json({ message: "Insufficient balance" });
       }
       
       // Create and shuffle a deck
       const deck = createDeck();
       
-      let currentPlayerCards: Card[] = [];
-      let currentDealerCards: Card[] = [];
+      // Deal initial cards
+      const playerCards = [deck.pop()!, deck.pop()!];
+      const dealerCards = [deck.pop()!, deck.pop()!];
+      
+      // Check for natural blackjack
+      const playerValue = calculateHandValue(playerCards);
+      const dealerValue = calculateHandValue(dealerCards);
+      
       let gameResult: 'win' | 'lose' | 'push' | null = null;
-      
-      if (action === 'deal') {
-        // Deal initial cards
-        currentPlayerCards = [deck.pop()!, deck.pop()!];
-        currentDealerCards = [deck.pop()!, deck.pop()!];
-        
-        // Check for natural blackjack
-        const playerValue = calculateHandValue(currentPlayerCards);
-        const dealerValue = calculateHandValue(currentDealerCards);
-        
-        if (playerValue === 21) {
-          if (dealerValue === 21) {
-            gameResult = 'push';
-          } else {
-            gameResult = 'win';
-          }
-        }
-      } else {
-        // Continue existing game
-        currentPlayerCards = playerCards;
-        currentDealerCards = dealerCards;
-        
-        if (action === 'hit') {
-          // Deal another card to player
-          currentPlayerCards.push(deck.pop()!);
-          
-          // Check if player busts
-          const playerValue = calculateHandValue(currentPlayerCards);
-          if (playerValue > 21) {
-            gameResult = 'lose';
-          }
-        } else if (action === 'stand') {
-          // Dealer plays
-          while (calculateHandValue(currentDealerCards) < 17) {
-            currentDealerCards.push(deck.pop()!);
-          }
-          
-          const playerValue = calculateHandValue(currentPlayerCards);
-          const dealerValue = calculateHandValue(currentDealerCards);
-          
-          // Determine winner
-          if (dealerValue > 21) {
-            gameResult = 'win';
-          } else if (playerValue > dealerValue) {
-            gameResult = 'win';
-          } else if (playerValue < dealerValue) {
-            gameResult = 'lose';
-          } else {
-            gameResult = 'push';
-          }
-        }
-      }
-      
-      // Calculate profit/loss if game is over
       let profit = 0;
-      let newBalance = user.balance;
       
-      if (gameResult) {
-        if (gameResult === 'win') {
-          // Check for natural blackjack (pays 3:2)
-          if (action === 'deal' && calculateHandValue(currentPlayerCards) === 21 && currentPlayerCards.length === 2) {
-            profit = Math.floor(betAmount * 1.5);
-          } else {
-            profit = betAmount;
-          }
-        } else if (gameResult === 'lose') {
-          profit = -betAmount;
+      if (playerValue === 21) {
+        if (dealerValue === 21) {
+          gameResult = 'push';
+        } else {
+          gameResult = 'win';
+          // Natural blackjack pays 3:2
+          profit = Math.floor(betAmount * 1.5);
         }
-        // Push = 0 profit/loss
         
         // Update user balance
-        newBalance = user.balance + profit;
+        const newBalance = user.balance + profit;
         await storage.updateUserBalance(user.id, newBalance);
+        
+        // Record the bet
+        const gameData: BlackjackGameData = {
+          playerCards,
+          dealerCards,
+          playerScore: playerValue,
+          dealerScore: dealerValue,
+          result: gameResult
+        };
+        
+        await storage.createBet({
+          userId: user.id,
+          game: "blackjack",
+          betAmount,
+          profit,
+          gameData
+        });
+      } else {
+        // Deduct bet amount from balance for ongoing game
+        const newBalance = user.balance - betAmount;
+        await storage.updateUserBalance(user.id, newBalance);
+      }
+      
+      // Return game state
+      res.json({
+        playerCards,
+        dealerCards,
+        playerScore: playerValue,
+        dealerScore: dealerValue,
+        result: gameResult,
+        profit,
+        gameOver: gameResult !== null
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Error starting blackjack game" });
+    }
+  });
+  
+  // Blackjack game - hit
+  app.post("/api/game/blackjack/hit", requireAuth, async (req, res) => {
+    try {
+      const { playerCards, dealerCards, betAmount } = req.body;
+      
+      if (!playerCards || !dealerCards || !betAmount) {
+        return res.status(400).json({ message: "Invalid game parameters" });
+      }
+      
+      const user = await storage.getUser(req.user!.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Create deck
+      const deck = createDeck();
+      
+      // Deal another card to player
+      const currentPlayerCards = [...playerCards];
+      const currentDealerCards = [...dealerCards];
+      currentPlayerCards.push(deck.pop()!);
+      
+      // Check if player busts
+      const playerValue = calculateHandValue(currentPlayerCards);
+      const dealerValue = calculateHandValue(currentDealerCards);
+      
+      let gameResult: 'win' | 'lose' | 'push' | null = null;
+      let profit = 0;
+      
+      if (playerValue > 21) {
+        gameResult = 'lose';
+        profit = -betAmount;
         
         // Record the bet
         const gameData: BlackjackGameData = {
           playerCards: currentPlayerCards,
           dealerCards: currentDealerCards,
-          playerScore: calculateHandValue(currentPlayerCards),
-          dealerScore: calculateHandValue(currentDealerCards),
+          playerScore: playerValue,
+          dealerScore: dealerValue,
           result: gameResult
         };
         
@@ -374,15 +466,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         playerCards: currentPlayerCards,
         dealerCards: currentDealerCards,
-        playerScore: calculateHandValue(currentPlayerCards),
-        dealerScore: calculateHandValue(currentDealerCards),
+        playerScore: playerValue,
+        dealerScore: dealerValue,
         result: gameResult,
         profit,
-        newBalance,
         gameOver: gameResult !== null
       });
     } catch (error) {
-      res.status(500).json({ message: "Error processing blackjack game" });
+      res.status(500).json({ message: "Error processing hit" });
+    }
+  });
+  
+  // Blackjack game - stand
+  app.post("/api/game/blackjack/stand", requireAuth, async (req, res) => {
+    try {
+      const { playerCards, dealerCards, betAmount } = req.body;
+      
+      if (!playerCards || !dealerCards || !betAmount) {
+        return res.status(400).json({ message: "Invalid game parameters" });
+      }
+      
+      const user = await storage.getUser(req.user!.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Create deck
+      const deck = createDeck();
+      
+      const currentPlayerCards = [...playerCards];
+      let currentDealerCards = [...dealerCards];
+      
+      // Dealer plays
+      while (calculateHandValue(currentDealerCards) < 17) {
+        currentDealerCards.push(deck.pop()!);
+      }
+      
+      const playerValue = calculateHandValue(currentPlayerCards);
+      const dealerValue = calculateHandValue(currentDealerCards);
+      
+      // Determine winner
+      let gameResult: 'win' | 'lose' | 'push';
+      let profit = 0;
+      
+      if (dealerValue > 21) {
+        gameResult = 'win';
+        profit = betAmount;
+      } else if (playerValue > dealerValue) {
+        gameResult = 'win';
+        profit = betAmount;
+      } else if (playerValue < dealerValue) {
+        gameResult = 'lose';
+        profit = -betAmount;
+      } else {
+        gameResult = 'push';
+        profit = 0;
+      }
+      
+      // Update balance
+      const newBalance = user.balance + betAmount + profit;
+      await storage.updateUserBalance(user.id, newBalance);
+      
+      // Record the bet
+      const gameData: BlackjackGameData = {
+        playerCards: currentPlayerCards,
+        dealerCards: currentDealerCards,
+        playerScore: playerValue,
+        dealerScore: dealerValue,
+        result: gameResult
+      };
+      
+      await storage.createBet({
+        userId: user.id,
+        game: "blackjack",
+        betAmount,
+        profit,
+        gameData
+      });
+      
+      res.json({
+        playerCards: currentPlayerCards,
+        dealerCards: currentDealerCards,
+        playerScore: playerValue,
+        dealerScore: dealerValue,
+        result: gameResult,
+        profit,
+        newBalance,
+        gameOver: true
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Error processing stand" });
     }
   });
 

@@ -86,21 +86,28 @@ export default function MinesGame() {
   const revealTileMutation = useMutation({
     mutationFn: async (tileIndex: number) => {
       const res = await apiRequest("POST", "/api/game/mines/reveal", {
-        tileIndex
+        tileIndex,
+        betAmount,
+        mineCount,
+        minePositions,
+        revealedPositions: revealedTiles
       });
       return await res.json();
     },
     onSuccess: (data) => {
+      // Add the revealed tile to our list
       setRevealedTiles(prev => [...prev, data.tileIndex]);
       
       if (data.hitMine) {
         setHitMine(true);
         setGameActive(false);
-        // Game over, no need to update other states
+        // Invalidate queries to refresh user data since we lost
+        queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/bets"] });
       } else {
         // Update multiplier and potential payout
-        setCurrentMultiplier(data.multiplier);
-        setPotentialPayout(betAmount * data.multiplier);
+        setCurrentMultiplier(data.currentMultiplier);
+        setPotentialPayout(data.potentialPayout);
       }
       
       setGameError(null);
@@ -118,7 +125,12 @@ export default function MinesGame() {
   // Cash out mutation
   const cashOutMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/game/mines/cashout", {});
+      const res = await apiRequest("POST", "/api/game/mines/cashout", {
+        betAmount,
+        mineCount,
+        minePositions,
+        revealedPositions: revealedTiles
+      });
       return await res.json();
     },
     onSuccess: (data) => {

@@ -84,7 +84,11 @@ export default function BlackjackGame() {
   // Hit mutation
   const hitMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/game/blackjack/hit", {});
+      const res = await apiRequest("POST", "/api/game/blackjack/hit", {
+        playerCards,
+        dealerCards,
+        betAmount
+      });
       return await res.json();
     },
     onSuccess: (data) => {
@@ -124,7 +128,11 @@ export default function BlackjackGame() {
   // Stand mutation
   const standMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/game/blackjack/stand", {});
+      const res = await apiRequest("POST", "/api/game/blackjack/stand", {
+        playerCards,
+        dealerCards,
+        betAmount
+      });
       return await res.json();
     },
     onSuccess: (data) => {

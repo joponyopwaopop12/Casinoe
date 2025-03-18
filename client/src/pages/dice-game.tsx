@@ -29,12 +29,12 @@ export default function DiceGame() {
   const [gameError, setGameError] = useState<string | null>(null);
   
   // Get bet history
-  const { data: bets = [] } = useQuery({
+  const { data: bets = [] } = useQuery<any[]>({
     queryKey: ["/api/bets"],
   });
   
   // Filter only dice bets
-  const diceHistory = bets.filter(bet => bet.game === 'dice');
+  const diceHistory = bets.filter((bet: any) => bet.game === 'dice');
   
   // Dot positions for dice visualization (1-6)
   const dotPositions = [
@@ -69,7 +69,7 @@ export default function DiceGame() {
   // Dice roll mutation
   const rollMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/game/dice", {
+      const res = await apiRequest("POST", "/api/game/dice/roll", {
         betAmount,
         prediction,
         targetValue
@@ -256,7 +256,7 @@ export default function DiceGame() {
             <CardContent className="max-h-[500px] overflow-y-auto">
               {diceHistory.length > 0 ? (
                 <div className="divide-y divide-slate-800">
-                  {diceHistory.map((bet) => {
+                  {diceHistory.map((bet: any) => {
                     const gameData = bet.gameData as any;
                     const isWin = bet.profit > 0;
                     
