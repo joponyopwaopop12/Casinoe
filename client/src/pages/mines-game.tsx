@@ -284,8 +284,8 @@ export default function MinesGame() {
             ${(isRevealed || hitMine || shakingTile !== null) ? 'cursor-default' : 'cursor-pointer'}
           `}
         >
-          {isRevealed && !isMine && (
-            <Gem className="h-6 w-6 text-white" />
+          {((isRevealed && !isMine) || (!isRevealed && gameActive)) && (
+            <Gem className="h-6 w-6 text-white" style={{ opacity: isRevealed ? 1 : 0 }} />
           )}
           {(isExposedMine || isExploding) && (
             <Bomb className={`h-6 w-6 text-white ${isExploding ? 'animate-spin' : ''}`} />

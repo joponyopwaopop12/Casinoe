@@ -276,10 +276,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const safeCells = totalCells - mineCount;
       const safeRevealCount = newRevealedPositions.length;
       
-      // Calculate multiplier
+      // Calculate multiplier - higher mine count means higher potential multiplier
       const baseMultiplier = 1;
-      const maxMultiplier = 10;
-      const multiplier = baseMultiplier + (safeRevealCount / safeCells) ** 2 * maxMultiplier;
+      const maxMultiplier = mineCount * 2; // Scale max multiplier with mine count
+      const progressMultiplier = (safeRevealCount / safeCells) ** 1.5; // Made curve less steep
+      const multiplier = baseMultiplier + progressMultiplier * maxMultiplier;
       
       // Calculate potential profit
       let profit = hitMine ? -betAmount : Math.floor(betAmount * (multiplier - 1));
