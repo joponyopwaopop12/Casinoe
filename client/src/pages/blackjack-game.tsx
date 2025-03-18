@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Layout } from "@/components/sidebar";
 import { WinAnimation } from "@/components/win-animation";
 import { useAuth } from "@/hooks/use-auth";
@@ -16,14 +16,24 @@ import {
   Layers,
   Plus,
   Hand,
-  RotateCcw
+  RotateCcw,
+  ArrowLeft
 } from "lucide-react";
 import { Card } from "@shared/schema";
+import { useGameSession } from "@/hooks/use-game-session";
+import useSound from "use-sound";
+import revealSound from "@/assets/sounds/reveal.mp3";
 
 export default function BlackjackGame() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Use game session hook for routing
+  const { gameId, isActiveSession, startSession, endSession } = useGameSession('blackjack');
+  
+  // Sound effects
+  const [playCardSound] = useSound(revealSound);
   
   // Game state
   const [betAmount, setBetAmount] = useState(100);
@@ -36,6 +46,9 @@ export default function BlackjackGame() {
   const [gameError, setGameError] = useState<string | null>(null);
   const [showWinAnimation, setShowWinAnimation] = useState(false);
   const [winAmount, setWinAmount] = useState(0);
+  
+  // Animation states
+  const [dealingCard, setDealingCard] = useState(false);
   
   // Get recent bets for the user
   const { data: bets = [] } = useQuery<any[]>({
@@ -163,6 +176,21 @@ export default function BlackjackGame() {
     },
   });
   
+  // When game session changes, synchronize with local state
+  useEffect(() => {
+    setGameActive(isActiveSession);
+    
+    // Reset game state when session ends
+    if (!isActiveSession) {
+      setPlayerCards([]);
+      setDealerCards([]);
+      setPlayerScore(0);
+      setDealerScore(0);
+      setGameResult(null);
+      setDealingCard(false);
+    }
+  }, [isActiveSession]);
+  
   // Handle start game
   const handleStartGame = () => {
     if (!isValidBet()) {
@@ -170,25 +198,70 @@ export default function BlackjackGame() {
       return;
     }
     
-    startGameMutation.mutate();
+    // Create new session and redirect
+    const newGameId = startSession();
+    
+    // Play card dealing sound
+    playCardSound();
+    
+    // Start dealing animation
+    setDealingCard(true);
+    
+    // After animation delay, start the actual game
+    setTimeout(() => {
+      startGameMutation.mutate();
+      setDealingCard(false);
+    }, 500);
   };
   
   // Handle hit
   const handleHit = () => {
-    if (!gameActive || hitMutation.isPending || standMutation.isPending) {
+    if (!gameActive || hitMutation.isPending || standMutation.isPending || dealingCard) {
       return;
     }
     
-    hitMutation.mutate();
+    // Play card sound
+    playCardSound();
+    
+    // Start dealing animation
+    setDealingCard(true);
+    
+    // After animation delay, execute the hit
+    setTimeout(() => {
+      hitMutation.mutate();
+      setDealingCard(false);
+      
+      // If game is over and player lost, return to menu after delay
+      if (playerScore + 10 > 21) {
+        setTimeout(() => {
+          endSession();
+        }, 1500);
+      }
+    }, 300);
   };
   
   // Handle stand
   const handleStand = () => {
-    if (!gameActive || hitMutation.isPending || standMutation.isPending) {
+    if (!gameActive || hitMutation.isPending || standMutation.isPending || dealingCard) {
       return;
     }
     
-    standMutation.mutate();
+    // Play card sound for dealer reveal
+    playCardSound();
+    
+    // Start dealing animation
+    setDealingCard(true);
+    
+    // After animation delay, execute the stand
+    setTimeout(() => {
+      standMutation.mutate();
+      setDealingCard(false);
+      
+      // Return to menu after game result is shown
+      setTimeout(() => {
+        endSession();
+      }, 1500);
+    }, 300);
   };
   
   // Render a playing card
@@ -212,6 +285,8 @@ export default function BlackjackGame() {
         relative w-16 h-24 sm:w-20 sm:h-30 rounded-lg overflow-hidden
         ${hidden ? 'bg-slate-800' : 'bg-white shadow-md'}
         border border-slate-300 flex flex-col items-center justify-center
+        ${dealingCard ? 'animate-[dealCard_0.3s_ease-out]' : ''}
+        transition-all duration-200
       `}>
         {!hidden && (
           <>
@@ -458,6 +533,18 @@ export default function BlackjackGame() {
             </UICard>
           </div>
         </div>
+        
+        {/* Back button (only shown in active game) */}
+        {isActiveSession && (
+          <Button 
+            onClick={endSession} 
+            variant="outline" 
+            className="mt-6"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Games
+          </Button>
+        )}
       </div>
     </Layout>
   );
