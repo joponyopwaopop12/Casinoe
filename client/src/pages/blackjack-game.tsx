@@ -175,14 +175,18 @@ export default function BlackjackGame() {
   
   // Handle hit
   const handleHit = () => {
-    if (!gameActive) return;
+    if (!gameActive || hitMutation.isPending || standMutation.isPending) {
+      return;
+    }
     
     hitMutation.mutate();
   };
   
   // Handle stand
   const handleStand = () => {
-    if (!gameActive) return;
+    if (!gameActive || hitMutation.isPending || standMutation.isPending) {
+      return;
+    }
     
     standMutation.mutate();
   };

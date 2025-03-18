@@ -175,7 +175,9 @@ export default function MinesGame() {
   
   // Handle cash out
   const handleCashOut = () => {
-    if (!gameActive) return;
+    if (!gameActive || revealedTiles.length === 0) {
+      return;
+    }
     
     cashOutMutation.mutate();
   };

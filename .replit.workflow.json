@@ -1,8 +1,0 @@
-{
-  "workflows": [
-    {
-      "name": "Start Dev Server",
-      "command": "npm run dev"
-    }
-  ]
-}
