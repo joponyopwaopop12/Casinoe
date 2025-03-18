@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Layout } from "@/components/sidebar";
 import { WinAnimation } from "@/components/win-animation";
 import { useAuth } from "@/hooks/use-auth";
@@ -18,6 +18,10 @@ import {
   DollarSign, 
   Gem 
 } from "lucide-react";
+import { useGameSession } from "@/hooks/use-game-session";
+import useSound from "use-sound";
+import explosionSound from "@/assets/sounds/explosion.mp3";
+import revealSound from "@/assets/sounds/reveal.mp3";
 
 export default function MinesGame() {
   const { user } = useAuth();

@@ -18,8 +18,12 @@ function Router() {
       <Route path="/auth" component={AuthPage} />
       <ProtectedRoute path="/" component={HomePage} />
       <ProtectedRoute path="/dice" component={DiceGame} />
+      {/* Mines game with and without session ID */}
       <ProtectedRoute path="/mines" component={MinesGame} />
+      <ProtectedRoute path="/mines/:gameId" component={MinesGame} />
+      {/* Blackjack game with and without session ID */}
       <ProtectedRoute path="/blackjack" component={BlackjackGame} />
+      <ProtectedRoute path="/blackjack/:gameId" component={BlackjackGame} />
       <ProtectedRoute path="/history" component={BetHistory} />
       <Route component={NotFound} />
     </Switch>
